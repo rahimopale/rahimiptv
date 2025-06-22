@@ -2,31 +2,31 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.iptvregion.eu.org/search/label/M3U?m=1"
-HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-def get_post_links():
-    res = requests.get(BASE_URL, headers=HEADERS)
-    soup = BeautifulSoup(res.content, "html.parser")
-    posts = soup.select("a[href*='/20']")  # rough filter for post links
-    links = [a["href"] for a in posts if a["href"].startswith("https://www.iptvregion.eu.org")]
-    return links[:5]
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com"
+}
 
-def extract_m3u_from_post(url):
-    res = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(res.content, "html.parser")
-    m3u_links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".m3u") or ".m3u?" in a["href"]]
-    return m3u_links[:5]
+def get_m3u_links():
+    try:
+        response = requests.get(BASE_URL, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, "html.parser")
+        links = [a["href"] for a in soup.find_all("a", href=True) if ".m3u" in a["href"]]
+        return links[:5]  # Return top 5 M3U links
+    except Exception as e:
+        print("Failed to retrieve M3U links:", e)
+        return []
 
-def save_all_links(all_links, filename="opale.m3u"):
+def save_to_file(links, filename="opale.m3u"):
     with open(filename, "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
-        for link in all_links:
+        for link in links:
             f.write(f"#EXTINF:-1,{link}\n{link}\n")
 
 if __name__ == "__main__":
-    all_links = []
-    posts = get_post_links()
-    for post in posts:
-        links = extract_m3u_from_post(post)
-        all_links.extend(links)
-    save_all_links(all_links)
+    links = get_m3u_links()
+    save_to_file(links)
